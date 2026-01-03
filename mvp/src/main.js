@@ -139,7 +139,7 @@
     if (typeof value === "number") {
       return value;
     }
-    const normalized = String(value).replace(/[,\s]/g, "");
+    const normalized = String(value).replace(/[¥,\s]/g, "");
     const parsed = Number(normalized);
     return Number.isNaN(parsed) ? 0 : parsed;
   }
