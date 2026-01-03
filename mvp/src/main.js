@@ -40,10 +40,15 @@
   const ASSET_HEADERS = {
     日付: "date",
     "合計（円）": "total",
+    "合計(円)": "total",
     "預金・現金・暗号資産（円）": "cash",
+    "預金・現金・暗号資産(円)": "cash",
     "株式(現物)（円）": "stocks",
+    "株式(現物)(円)": "stocks",
     "投資信託（円）": "funds",
+    "投資信託(円)": "funds",
     "ポイント（円）": "points",
+    "ポイント(円)": "points",
   };
 
   function openDb() {
@@ -87,7 +92,8 @@
   }
 
   function normalizeHeader(header) {
-    return header?.trim() ?? "";
+    if (!header) return "";
+    return header.replace(/^\uFEFF/, "").trim();
   }
 
   function mapRow(row, headerMap) {
@@ -438,6 +444,14 @@
     renderMonthlySummary();
   }
 
+  function showEnvironmentNotice() {
+    const isFile = window.location.protocol === "file:";
+    if (isFile && !window.XLSX) {
+      importResult.textContent =
+        "注意: file:// で開いているため XLSX が読み込めません。CSVのみ取り込み可能です。";
+    }
+  }
+
   async function handleImport(file, type) {
     if (!file) return;
     try {
@@ -472,6 +486,7 @@
     }
     db = await openDb();
     dbStatus.textContent = "DB: 初期化済み";
+    showEnvironmentNotice();
     await loadData();
 
     document.getElementById("import-transactions").addEventListener("click", async () => {
