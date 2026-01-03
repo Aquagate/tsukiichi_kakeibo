@@ -1,0 +1,7 @@
+日付,内容,金額（円）,保有金融機関,大項目,中項目,メモ,振替(0/1),ID,計算対象(0/1),Source.Name
+2024-03-01,給与,300000,みずほ,収入,給与,,0,tx-001,1,transactions_sample.csv
+2024-03-02,家賃,-120000,みずほ,住居,家賃,,0,tx-002,1,transactions_sample.csv
+2024-03-05,食材,-12000,楽天カード,食費,スーパー,,0,tx-003,1,transactions_sample.csv
+2024-03-06,投信積立,-30000,楽天証券,投資,投資信託,,0,tx-004,1,transactions_sample.csv
+2024-03-08,口座振替,50000,みずほ,振替,振替,生活口座へ,1,tx-005,1,transactions_sample.csv
+2024-03-10,電気代,-9000,みずほ,光熱費,電気,,0,tx-006,1,transactions_sample.csv
