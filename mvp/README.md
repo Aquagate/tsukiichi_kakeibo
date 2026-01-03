@@ -4,6 +4,15 @@ MoneyForwardの家計簿（明細）と資産推移をローカルで取り込�
 
 ## 実行手順
 
+### 1. そのまま開く（オフライン）
+
+ネットワークに依存せず動作する構成です。CSVの読み込みはオフラインで可能です。
+
+1. `mvp/index.html` をブラウザで直接開く
+2. サンプルCSVを読み込む
+
+### 2. ローカルサーバーで開く（推奨）
+
 ```bash
 cd mvp
 npm install
@@ -12,13 +21,13 @@ npm run dev
 
 ブラウザで表示されたURLにアクセスしてください。
 
+> ※ npm install が失敗する環境では「そのまま開く（オフライン）」手順で動作確認できます。
+> ※ XLSXの読み込みにはSheetJS（CDN）を利用しているため、ネットワーク接続が必要です。
+
 ## 主要ファイルと役割
 
 - `index.html` : 画面構成（データ取込/ダッシュボード/明細一覧/集計）
-- `src/main.js` : 画面イベントと描画ロジック
-- `src/importers.js` : CSV/XLSXの読み込みとMF形式のマッピング
-- `src/db.js` : IndexedDB 操作
-- `src/aggregations.js` : 月次集計・アラート生成
+- `src/main.js` : 画面イベントと描画ロジック（CSVは依存ライブラリなしで動作）
 - `src/style.css` : 画面のスタイル
 - `sample-data/*.csv` : サンプル入力データ
 
