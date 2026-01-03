@@ -66,6 +66,32 @@ body {
   color: #2d6a4f;
 }
 
+.import-meta,
+.import-preview,
+.import-mapping,
+.import-errors {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.import-errors {
+  color: #b91c1c;
+}
+
+.import-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.import-preview th,
+.import-preview td {
+  padding: 4px 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 11px;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

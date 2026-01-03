@@ -16,11 +16,23 @@
     excluded: document.getElementById("filter-excluded"),
   };
 
+  const assetPreviewMeta = document.getElementById("asset-import-meta");
+  const assetPreview = document.getElementById("asset-import-preview");
+  const assetMapping = document.getElementById("asset-import-mapping");
+  const assetErrors = document.getElementById("asset-import-errors");
+
   const DB_NAME = "tsukiichi_kakeibo_mvp";
   const DB_VERSION = 1;
   let db;
   let transactions = [];
   let assets = [];
+
+  const requiredAssetColumns = ["date", "total"];
+  const assetColumnLabels = {
+    date: "日付",
+    total: "合計",
+  };
+  let assetCsvState = null;
 
   const TRANSACTION_HEADERS = {
     日付: "date",
@@ -39,15 +51,10 @@
 
   const ASSET_HEADERS = {
     日付: "date",
-    "合計（円）": "total",
     "合計(円)": "total",
-    "預金・現金・暗号資産（円）": "cash",
     "預金・現金・暗号資産(円)": "cash",
-    "株式(現物)（円）": "stocks",
     "株式(現物)(円)": "stocks",
-    "投資信託（円）": "funds",
     "投資信託(円)": "funds",
-    "ポイント（円）": "points",
     "ポイント(円)": "points",
   };
 
@@ -92,20 +99,37 @@
   }
 
   function normalizeHeader(header) {
-    if (!header) return "";
-    return header.replace(/^\uFEFF/, "").trim();
+    return window.csvUtils.normalizeHeader(header);
   }
 
-  function mapRow(row, headerMap) {
+  function mapRow(row, headerMap, overrides = {}) {
     const mapped = {};
     for (const [key, value] of Object.entries(row)) {
       const normalized = normalizeHeader(key);
-      const mappedKey = headerMap[normalized];
+      const overrideKey = overrides[normalized];
+      const mappedKey = overrideKey || headerMap[normalized];
       if (mappedKey) {
         mapped[mappedKey] = value;
       }
     }
     return mapped;
+  }
+
+  function getMappedAssetKeys(headers = [], overrides = {}) {
+    const mappedKeys = new Set();
+    headers.forEach((header) => {
+      const normalized = normalizeHeader(header);
+      const mappedKey = overrides[normalized] || ASSET_HEADERS[normalized];
+      if (mappedKey) {
+        mappedKeys.add(mappedKey);
+      }
+    });
+    return mappedKeys;
+  }
+
+  function getMissingAssetColumns(headers = [], overrides = {}) {
+    const mappedKeys = getMappedAssetKeys(headers, overrides);
+    return requiredAssetColumns.filter((key) => !mappedKeys.has(key));
   }
 
   function toNumber(value) {
@@ -115,9 +139,18 @@
     if (typeof value === "number") {
       return value;
     }
-    const normalized = String(value).replace(/[,\s]/g, "");
+    const normalized = String(value).replace(/[¥,\s]/g, "");
     const parsed = Number(normalized);
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  function toNumberOrNull(value) {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+    const normalized = String(value).replace(/[¥,\s]/g, "");
+    const parsed = Number(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 
   function toDateString(value) {
@@ -130,7 +163,8 @@
       if (!date) return "";
       return new Date(date.y, date.m - 1, date.d).toISOString().slice(0, 10);
     }
-    const parsed = new Date(value);
+    const normalized = String(value).replace(/\//g, "-");
+    const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
       return "";
     }
@@ -174,62 +208,41 @@
       .filter((row) => row.date && row.description);
   }
 
-  function parseAssets(sheetRows) {
-    return sheetRows
-      .map((row) => mapRow(row, ASSET_HEADERS))
-      .filter((row) => row.date)
-      .map((row) => ({
-        date: toDateString(row.date),
-        total: toNumber(row.total),
-        cash: toNumber(row.cash),
-        stocks: toNumber(row.stocks),
-        funds: toNumber(row.funds),
-        points: toNumber(row.points),
-      }))
-      .filter((row) => row.date);
-  }
+  function parseAssets(rows, overrides = {}) {
+    const errors = [];
+    const items = rows
+      .map((row) => mapRow(row, ASSET_HEADERS, overrides))
+      .map((row, index) => {
+        const date = toDateString(row.date);
+        const total = toNumberOrNull(row.total);
+        const cash = row.cash === undefined ? null : toNumberOrNull(row.cash);
+        const stocks = row.stocks === undefined ? null : toNumberOrNull(row.stocks);
+        const funds = row.funds === undefined ? null : toNumberOrNull(row.funds);
+        const points = row.points === undefined ? null : toNumberOrNull(row.points);
 
-  function parseCsvLine(line) {
-    const result = [];
-    let current = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i += 1) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i += 1;
-        } else {
-          inQuotes = !inQuotes;
+        const rowErrors = [];
+        if (!date) rowErrors.push("日付が不正です");
+        if (total === null) {
+          rowErrors.push("合計が不正です");
         }
-      } else if (char === "," && !inQuotes) {
-        result.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-    return result;
+        if (rowErrors.length) {
+          errors.push({ rowNumber: index + 2, messages: rowErrors });
+        }
+
+        return { date, total, cash, stocks, funds, points };
+      })
+      .filter((row) => row.date);
+    return { items, errors };
   }
 
-  function csvToJson(text) {
-    const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
-    if (!lines.length) return [];
-    const headers = parseCsvLine(lines[0]);
-    return lines.slice(1).map((line) => {
-      const values = parseCsvLine(line);
-      const row = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index] ?? "";
-      });
-      return row;
-    });
-  }
-
-  async function readCsv(file) {
-    const text = await file.text();
-    return csvToJson(text);
+  async function readCsv(file, requiredHeaderKeys = []) {
+    const buffer = await file.arrayBuffer();
+    const { text, encoding } = window.csvUtils.decodeCsvArrayBuffer(
+      buffer,
+      requiredHeaderKeys
+    );
+    const parsed = window.csvUtils.parseCsvText(text);
+    return { ...parsed, encoding };
   }
 
   async function readWorkbook(file) {
@@ -452,13 +465,34 @@
     }
   }
 
+  function getAssetDupStrategy() {
+    const selected = document.querySelector('input[name="asset-dup"]:checked');
+    return selected ? selected.value : "overwrite";
+  }
+
   async function handleImport(file, type) {
     if (!file) return;
     try {
       const isCsv = file.name.toLowerCase().endsWith(".csv");
       let rows = [];
+      let encoding = "";
       if (isCsv) {
-        rows = await readCsv(file);
+        const csvData = await readCsv(file, [
+          normalizeHeader("日付"),
+          normalizeHeader("合計(円)"),
+        ]);
+        rows = csvData.rows.map((row) => row.values);
+        encoding = csvData.encoding;
+        if (type === "assets") {
+          assetCsvState = {
+            headers: csvData.headers,
+            rows: csvData.rows,
+            encoding,
+            overrides: assetCsvState?.overrides ?? {},
+          };
+          renderAssetPreview();
+          renderAssetMapping();
+        }
       } else {
         const workbook = await readWorkbook(file);
         rows = sheetToJson(workbook, type === "transactions" ? "マスタ" : "資産推移");
@@ -469,9 +503,35 @@
         await upsertAll("transactions", records);
         importResult.textContent = `明細を ${records.length} 件取り込みました。`;
       } else {
-        const records = parseAssets(rows);
-        await upsertAll("assets", records);
-        importResult.textContent = `資産推移を ${records.length} 件取り込みました。`;
+        if (assetCsvState?.headers) {
+          const missing = getMissingAssetColumns(
+            assetCsvState.headers,
+            assetCsvState.overrides ?? {}
+          );
+          if (missing.length) {
+          assetErrors.textContent = `必須列が不足しています: ${missing
+            .map((key) => assetColumnLabels[key] || key)
+            .join(", ")}`;
+          return;
+        }
+      }
+        const overrides = assetCsvState?.overrides ?? {};
+        const { items, errors } = parseAssets(rows, overrides);
+        assetCsvState = assetCsvState ? { ...assetCsvState, errors } : { errors };
+        renderAssetErrors();
+        let importItems = items;
+        if (getAssetDupStrategy() === "skip") {
+          const existingDates = new Set(assets.map((asset) => asset.date));
+          importItems = items.filter((item) => !existingDates.has(item.date));
+        }
+        await upsertAll("assets", importItems);
+        const dates = importItems.map((item) => item.date).sort();
+        const range =
+          dates.length > 0 ? ` (${dates[0]} 〜 ${dates[dates.length - 1]})` : "";
+        importResult.textContent = `資産推移を ${importItems.length} 件取り込みました。${range}`;
+        if (encoding) {
+          importResult.textContent += ` (encoding: ${encoding})`;
+        }
       }
       await loadData();
     } catch (error) {
@@ -499,10 +559,114 @@
       await handleImport(file, "assets");
     });
 
+    document.getElementById("assets-file").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith(".csv")) return;
+      const csvData = await readCsv(file, [
+        normalizeHeader("日付"),
+        normalizeHeader("合計(円)"),
+      ]);
+      assetCsvState = {
+        headers: csvData.headers,
+        rows: csvData.rows,
+        encoding: csvData.encoding,
+        overrides: {},
+      };
+      renderAssetPreview();
+      renderAssetMapping();
+    });
+
     document.getElementById("refresh-ledger").addEventListener("click", () => {
       renderLedger();
     });
   }
 
   setup();
+
+  function renderAssetPreview() {
+    if (!assetCsvState) return;
+    assetPreviewMeta.textContent = assetCsvState.encoding
+      ? `CSV encoding: ${assetCsvState.encoding}`
+      : "";
+    const headers = assetCsvState.headers || [];
+    assetPreview.innerHTML = "";
+    if (!headers.length) return;
+    const previewRows = assetCsvState.rows.slice(0, 10);
+    const headerRow = headers.map((header) => `<th>${header}</th>`).join("");
+    const bodyRows = previewRows
+      .map(
+        (row) =>
+          `<tr>${headers
+            .map((header) => `<td>${row.values[header] ?? ""}</td>`)
+            .join("")}</tr>`
+      )
+      .join("");
+    assetPreview.innerHTML = `
+      <div>検出列: ${headers.join(", ")}</div>
+      <table>
+        <thead><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderAssetMapping() {
+    if (!assetCsvState) return;
+    const headers = assetCsvState.headers || [];
+    if (!headers.length) return;
+    const missing = getMissingAssetColumns(headers, assetCsvState.overrides ?? {});
+    if (!missing.length) {
+      assetMapping.textContent = "カラムは自動マッピングされました。";
+      return;
+    }
+
+    const options = headers
+      .map((header) => `<option value="${normalizeHeader(header)}">${header}</option>`)
+      .join("");
+    assetMapping.innerHTML = `
+      <div>必須カラムが不足しています。手動でマッピングしてください。</div>
+      ${missing
+        .map(
+          (key) => `
+        <label>
+          ${assetColumnLabels[key] || key}
+          <select data-map-key="${key}">
+            <option value="">選択してください</option>
+            ${options}
+          </select>
+        </label>
+      `
+        )
+        .join("")}
+    `;
+    assetMapping.querySelectorAll("select").forEach((select) => {
+      select.addEventListener("change", (event) => {
+        const { mapKey } = event.target.dataset;
+        const value = event.target.value;
+        if (!assetCsvState.overrides) assetCsvState.overrides = {};
+        if (value) {
+          assetCsvState.overrides[value] = mapKey;
+        }
+      });
+    });
+  }
+
+  function renderAssetErrors() {
+    if (!assetCsvState?.errors?.length) {
+      assetErrors.textContent = "";
+      return;
+    }
+    assetErrors.innerHTML = `
+      <div>不正な行があります:</div>
+      <ul>
+        ${assetCsvState.errors
+          .map(
+            (error) =>
+              `<li>${error.rowNumber}行目: ${error.messages.join(", ")}</li>`
+          )
+          .join("")}
+      </ul>
+    `;
+  }
 })();

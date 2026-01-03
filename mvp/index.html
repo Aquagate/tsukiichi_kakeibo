@@ -29,6 +29,15 @@
             <input type="file" id="assets-file" accept=".csv,.xlsx" />
             <button id="import-assets">取込</button>
             <p class="hint">Excelは「資産推移」シート、CSVはヘッダー付きで読み込みます。</p>
+            <div class="hint">
+              同一日付のデータ:
+              <label><input type="radio" name="asset-dup" value="overwrite" checked />上書き</label>
+              <label><input type="radio" name="asset-dup" value="skip" />スキップ</label>
+            </div>
+            <div class="import-meta" id="asset-import-meta"></div>
+            <div class="import-preview" id="asset-import-preview"></div>
+            <div class="import-mapping" id="asset-import-mapping"></div>
+            <div class="import-errors" id="asset-import-errors"></div>
           </div>
           <div>
             <h3>サンプル</h3>
@@ -124,6 +133,7 @@
     </footer>
 
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
+    <script src="./src/csv-utils.js"></script>
     <script src="./src/main.js"></script>
   </body>
 </html>
