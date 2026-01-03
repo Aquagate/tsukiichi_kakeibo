@@ -16,4 +16,7 @@ const buffer = Buffer.from(sampleCsv, "utf8");
 const decoded = decodeCsvArrayBuffer(buffer, required);
 assert.strictEqual(decoded.encoding, "utf-8");
 
+const normalized = normalizeHeader(" 合計（円） ");
+assert.strictEqual(normalized, "合計(円)");
+
 console.log("csv-utils tests passed");
