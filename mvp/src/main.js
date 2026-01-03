@@ -28,6 +28,10 @@
   let assets = [];
 
   const requiredAssetColumns = ["date", "total"];
+  const assetColumnLabels = {
+    date: "日付",
+    total: "合計",
+  };
   let assetCsvState = null;
 
   const TRANSACTION_HEADERS = {
@@ -111,12 +115,21 @@
     return mapped;
   }
 
+  function getMappedAssetKeys(headers = [], overrides = {}) {
+    const mappedKeys = new Set();
+    headers.forEach((header) => {
+      const normalized = normalizeHeader(header);
+      const mappedKey = overrides[normalized] || ASSET_HEADERS[normalized];
+      if (mappedKey) {
+        mappedKeys.add(mappedKey);
+      }
+    });
+    return mappedKeys;
+  }
+
   function getMissingAssetColumns(headers = [], overrides = {}) {
-    const normalizedHeaders = headers.map((header) => normalizeHeader(header));
-    const overrideTargets = Object.values(overrides);
-    return requiredAssetColumns.filter(
-      (key) => !normalizedHeaders.includes(key) && !overrideTargets.includes(key)
-    );
+    const mappedKeys = getMappedAssetKeys(headers, overrides);
+    return requiredAssetColumns.filter((key) => !mappedKeys.has(key));
   }
 
   function toNumber(value) {
@@ -496,10 +509,12 @@
             assetCsvState.overrides ?? {}
           );
           if (missing.length) {
-            assetErrors.textContent = `必須列が不足しています: ${missing.join(", ")}`;
-            return;
-          }
+          assetErrors.textContent = `必須列が不足しています: ${missing
+            .map((key) => assetColumnLabels[key] || key)
+            .join(", ")}`;
+          return;
         }
+      }
         const overrides = assetCsvState?.overrides ?? {};
         const { items, errors } = parseAssets(rows, overrides);
         assetCsvState = assetCsvState ? { ...assetCsvState, errors } : { errors };
@@ -615,7 +630,7 @@
         .map(
           (key) => `
         <label>
-          ${key}
+          ${assetColumnLabels[key] || key}
           <select data-map-key="${key}">
             <option value="">選択してください</option>
             ${options}
