@@ -117,6 +117,18 @@ body {
   border: 1px solid #e5e7eb;
 }
 
+.panel--income {
+  background: #e3f2fd;
+}
+
+.panel--alert {
+  background: #fce4ec;
+}
+
+.card--asset {
+  background: #e8f5e9;
+}
+
 .kpi {
   display: grid;
   gap: 8px;
