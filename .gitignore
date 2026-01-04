@@ -1,0 +1,11 @@
+
+node\_modules/
+
+dist/
+
+.vite/
+
+.env
+
+.env.\*
+
