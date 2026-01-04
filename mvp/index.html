@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tsukiichi Kakeibo MVP</title>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>月いち家計簿 MVP</h1>
+        <p>ローカルファーストで家計簿と資産推移を管理するダッシュボード</p>
+      </div>
+      <div class="status" id="db-status">DB: 未初期化</div>
+    </header>
+
+    <main class="app-main">
+      <section class="card" id="import-section">
+        <h2>1. データ取込</h2>
+        <div class="import-grid">
+          <div>
+            <h3>家計簿（明細）</h3>
+            <input type="file" id="transactions-file" accept=".csv,.xlsx" />
+            <button id="import-transactions">取込</button>
+            <button id="clear-transactions" class="secondary">家計簿データ削除</button>
+            <p class="hint">Excelは「マスタ」シート、CSVはヘッダー付きで読み込みます。</p>
+          </div>
+          <div>
+            <h3>資産推移</h3>
+            <input type="file" id="assets-file" accept=".csv,.xlsx" />
+            <button id="import-assets">取込</button>
+            <p class="hint">Excelは「資産推移」シート、CSVはヘッダー付きで読み込みます。</p>
+            <div class="hint">
+              同一日付のデータ:
+              <label><input type="radio" name="asset-dup" value="overwrite" checked />上書き</label>
+              <label><input type="radio" name="asset-dup" value="skip" />スキップ</label>
+            </div>
+            <div class="import-meta" id="asset-import-meta"></div>
+            <div class="import-preview" id="asset-import-preview"></div>
+            <div class="import-mapping" id="asset-import-mapping"></div>
+            <div class="import-errors" id="asset-import-errors"></div>
+          </div>
+          <div>
+            <h3>サンプル</h3>
+            <p class="hint">sample-data/transactions_sample.csv と assets_sample.csv を利用できます。</p>
+          </div>
+        </div>
+        <div class="import-result" id="import-result"></div>
+      </section>
+
+      <section class="card" id="dashboard-section">
+        <h2>2. ダッシュボード</h2>
+        <div class="dashboard-grid">
+          <div class="panel">
+            <h3>今月の収支</h3>
+            <div class="kpi" id="monthly-summary"></div>
+          </div>
+          <div class="panel">
+            <h3>アラート</h3>
+            <ul id="alerts" class="list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <div class="content-column">
+          <section class="card" id="summary-section">
+            <h2>3. 月次集計</h2>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>月</th>
+                    <th>収入</th>
+                    <th>支出</th>
+                    <th>収支</th>
+                    <th>振替</th>
+                  </tr>
+                </thead>
+                <tbody id="monthly-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card" id="ledger-section">
+            <h2>4. 明細一覧</h2>
+            <div class="filters">
+              <label>期間(開始)
+                <input type="date" id="filter-start" />
+              </label>
+              <label>期間(終了)
+                <input type="date" id="filter-end" />
+              </label>
+              <label>検索
+                <input type="search" id="filter-search" placeholder="内容/メモ/カテゴリ" />
+              </label>
+              <label>
+                <input type="checkbox" id="filter-transfer" /> 振替も表示
+              </label>
+              <label>
+                <input type="checkbox" id="filter-excluded" /> 計算対象外も表示
+              </label>
+              <button id="refresh-ledger">再表示</button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日付</th>
+                    <th>内容</th>
+                    <th>金額</th>
+                    <th>金融機関</th>
+                    <th>大項目</th>
+                    <th>中項目</th>
+                    <th>メモ</th>
+                    <th>振替</th>
+                    <th>計算対象</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="content-column">
+          <section class="card">
+            <h3>大項目別 乖離サマリ</h3>
+            <p class="hint" id="category-gap-summary">準備中</p>
+          </section>
+          <section class="card">
+            <h3>今月の主要カテゴリ上位</h3>
+            <ol id="top-categories" class="list"></ol>
+          </section>
+          <section class="card">
+            <h3>資産スナップショット</h3>
+            <div class="kpi" id="asset-snapshot"></div>
+          </section>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="app-footer">
+      <p>ローカルファースト: 取り込んだデータはIndexedDBに保存され、外部送信は行いません。</p>
+    </footer>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
+    <script src="./src/csv-utils.js"></script>
+    <script src="./src/main.js"></script>
+  </body>
+</html>
