@@ -5,6 +5,7 @@
   const monthlyBody = document.getElementById("monthly-body");
   const monthlySummary = document.getElementById("monthly-summary");
   const topCategoriesEl = document.getElementById("top-categories");
+  const categoryGapSummaryEl = document.getElementById("category-gap-summary");
   const assetSnapshotEl = document.getElementById("asset-snapshot");
   const alertsEl = document.getElementById("alerts");
 
@@ -275,6 +276,18 @@
     return new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(value);
   }
 
+  function formatSignedCurrency(value) {
+    if (value === 0) return formatCurrency(0);
+    const sign = value > 0 ? "+" : "-";
+    return `${sign}${formatCurrency(Math.abs(value))}`;
+  }
+
+  function formatSignedPercent(value) {
+    if (value === 0) return "0%";
+    const sign = value > 0 ? "+" : "-";
+    return `${sign}${Math.abs(Math.round(value))}%`;
+  }
+
   function formatMonth(dateString) {
     const date = new Date(dateString);
     if (Number.isNaN(date.getTime())) return "";
@@ -345,6 +358,43 @@
       .map(([category, amount]) => ({ category, amount }));
   }
 
+  function categoryGapSummary(items, limit = 5) {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const monthKeys = [];
+    for (let i = 0; i < 12; i += 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      monthKeys.push(monthKey);
+    }
+    const monthSet = new Set(monthKeys);
+    const map = new Map();
+    for (const tx of items) {
+      if (tx.isTransfer || !tx.isIncluded) continue;
+      if (tx.amount >= 0) continue;
+      const month = formatMonth(tx.date);
+      if (!monthSet.has(month)) continue;
+      const key = tx.majorCategory || "未分類";
+      const categoryMonths = map.get(key) ?? new Map();
+      const total = categoryMonths.get(month) ?? 0;
+      categoryMonths.set(month, total + Math.abs(tx.amount));
+      map.set(key, categoryMonths);
+    }
+    const summaries = [];
+    for (const [category, categoryMonths] of map.entries()) {
+      const total = monthKeys.reduce((sum, month) => sum + (categoryMonths.get(month) ?? 0), 0);
+      const average = total / monthKeys.length;
+      const current = categoryMonths.get(currentMonth) ?? 0;
+      const gap = current - average;
+      const rate = average > 0 ? (gap / average) * 100 : null;
+      const sortKey = rate === null ? Math.abs(gap) : Math.abs(rate);
+      summaries.push({ category, current, average, gap, rate, sortKey });
+    }
+    return summaries
+      .sort((a, b) => b.sortKey - a.sortKey)
+      .slice(0, limit);
+  }
+
   function detectAlerts(items) {
     const alerts = [];
     const months = summarizeMonthly(items.filter((tx) => !tx.isTransfer && tx.isIncluded));
@@ -381,6 +431,31 @@
     topCategoriesEl.innerHTML = categories
       .map((item) => `<li>${item.category}: ${formatCurrency(item.amount)}</li>`)
       .join("");
+
+    const gaps = categoryGapSummary(transactions);
+    if (gaps.length) {
+      categoryGapSummaryEl.innerHTML = `
+        <div>大項目別の前年差（当月 vs 年間平均）</div>
+        <ul class="list">
+          ${gaps
+            .map((item) => {
+              const gapText =
+                item.rate === null
+                  ? formatSignedCurrency(item.gap)
+                  : `${formatSignedCurrency(item.gap)} (${formatSignedPercent(item.rate)})`;
+              return `<li>${item.category}: 当月 ${formatCurrency(item.current)} / 平均 ${formatCurrency(
+                item.average
+              )} / ${gapText}</li>`;
+            })
+            .join("")}
+        </ul>
+      `;
+    } else {
+      categoryGapSummaryEl.innerHTML = `
+        <div>大項目別の前年差（当月 vs 年間平均）</div>
+        <div class="hint">表示できるデータがありません。</div>
+      `;
+    }
 
     const snapshot = latestAssetSnapshot(assets);
     if (snapshot) {
