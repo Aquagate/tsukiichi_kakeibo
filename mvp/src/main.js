@@ -37,14 +37,15 @@
   const TRANSACTION_HEADERS = {
     日付: "date",
     内容: "description",
-    "金額（円)": "amount",
-    "金額（円）": "amount",
+    "金額(円)": "amount",
     保有金融機関: "institution",
     大項目: "majorCategory",
     中項目: "minorCategory",
     メモ: "memo",
+    振替: "isTransfer",
     "振替(0/1)": "isTransfer",
     ID: "id",
+    計算対象: "isIncluded",
     "計算対象(0/1)": "isIncluded",
     "Source.Name": "sourceFile",
   };
