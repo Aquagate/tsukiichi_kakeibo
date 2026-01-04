@@ -159,6 +159,10 @@ button:hover {
   opacity: 0.9;
 }
 
+button.secondary {
+  background: #6b7280;
+}
+
 .app-footer {
   padding: 24px 32px;
   text-align: center;

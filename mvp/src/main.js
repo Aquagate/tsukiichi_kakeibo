@@ -37,14 +37,15 @@
   const TRANSACTION_HEADERS = {
     日付: "date",
     内容: "description",
-    "金額（円)": "amount",
-    "金額（円）": "amount",
+    "金額(円)": "amount",
     保有金融機関: "institution",
     大項目: "majorCategory",
     中項目: "minorCategory",
     メモ: "memo",
+    振替: "isTransfer",
     "振替(0/1)": "isTransfer",
     ID: "id",
+    計算対象: "isIncluded",
     "計算対象(0/1)": "isIncluded",
     "Source.Name": "sourceFile",
   };
@@ -83,6 +84,15 @@
       const request = tx.objectStore(storeName).getAll();
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result ?? []);
+    });
+  }
+
+  function clearStore(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, "readwrite");
+      const request = tx.objectStore(storeName).clear();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
     });
   }
 
@@ -557,6 +567,12 @@
     document.getElementById("import-assets").addEventListener("click", async () => {
       const file = document.getElementById("assets-file").files[0];
       await handleImport(file, "assets");
+    });
+
+    document.getElementById("clear-transactions").addEventListener("click", async () => {
+      await clearStore("transactions");
+      await loadData();
+      importResult.textContent = "家計簿データを削除しました。";
     });
 
     document.getElementById("assets-file").addEventListener("change", async (event) => {
