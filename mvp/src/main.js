@@ -322,6 +322,33 @@
       }));
   }
 
+  function calculateMonthlyExpenseGaps(monthlyEntries) {
+    const monthMap = new Map(monthlyEntries.map((entry) => [entry.month, entry]));
+    const totalExpense = monthlyEntries.reduce((sum, entry) => sum + entry.expense, 0);
+    const totalCount = monthlyEntries.length;
+    return monthlyEntries.map((entry) => {
+      const [year, month] = entry.month.split("-");
+      const previousYearKey = `${Number(year) - 1}-${month}`;
+      const previousYearEntry = monthMap.get(previousYearKey);
+      if (previousYearEntry) {
+        return {
+          month: entry.month,
+          label: "前年差(支出)",
+          diff: entry.expense - previousYearEntry.expense,
+        };
+      }
+      if (totalCount <= 1) {
+        return { month: entry.month, label: "平均との差(支出)", diff: null };
+      }
+      const average = (totalExpense - entry.expense) / (totalCount - 1);
+      return {
+        month: entry.month,
+        label: "平均との差(支出)",
+        diff: entry.expense - average,
+      };
+    });
+  }
+
   function currentMonthSummary(items) {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -519,17 +546,28 @@
 
   function renderMonthlySummary() {
     const monthly = summarizeMonthly(transactions);
+    const expenseGaps = calculateMonthlyExpenseGaps(monthly);
+    const expenseGapMap = new Map(expenseGaps.map((entry) => [entry.month, entry]));
     monthlyBody.innerHTML = monthly
       .map(
-        (entry) => `
+        (entry) => {
+          const expenseGap = expenseGapMap.get(entry.month);
+          const gapLabel = expenseGap?.label ?? "前年差/平均との差(支出)";
+          const gapValue =
+            expenseGap && expenseGap.diff !== null
+              ? formatSignedCurrency(expenseGap.diff)
+              : "—";
+          return `
         <tr>
           <td>${entry.month}</td>
           <td>${formatCurrency(entry.income)}</td>
           <td>${formatCurrency(entry.expense)}</td>
+          <td>${gapLabel}: ${gapValue}</td>
           <td>${formatCurrency(entry.net)}</td>
           <td>${formatCurrency(entry.transfer)}</td>
         </tr>
       `
+        }
       )
       .join("");
   }
