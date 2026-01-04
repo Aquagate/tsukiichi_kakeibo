@@ -71,8 +71,26 @@
         </div>
       </section>
 
+      <section class="card" id="summary-section">
+        <h2>3. 月次集計</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>月</th>
+                <th>収入</th>
+                <th>支出</th>
+                <th>収支</th>
+                <th>振替</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-body"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="card" id="ledger-section">
-        <h2>3. 明細一覧</h2>
+        <h2>4. 明細一覧</h2>
         <div class="filters">
           <label>期間(開始)
             <input type="date" id="filter-start" />
@@ -107,24 +125,6 @@
               </tr>
             </thead>
             <tbody id="ledger-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card" id="summary-section">
-        <h2>4. 月次集計</h2>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>月</th>
-                <th>収入</th>
-                <th>支出</th>
-                <th>収支</th>
-                <th>振替</th>
-              </tr>
-            </thead>
-            <tbody id="monthly-body"></tbody>
           </table>
         </div>
       </section>
