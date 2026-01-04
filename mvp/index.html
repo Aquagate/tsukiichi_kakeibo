@@ -50,83 +50,89 @@
 
       <section class="card" id="dashboard-section">
         <h2>2. ダッシュボード</h2>
-        <div class="dashboard-grid">
-          <div class="panel">
-            <h3 id="monthly-summary-title">今月の収支</h3>
-            <div class="kpi" id="monthly-summary"></div>
-          </div>
-          <div class="panel">
-            <h3>主要カテゴリ上位</h3>
-            <ol id="top-categories" class="list"></ol>
-            <div id="category-gap-summary"></div>
-          </div>
-          <div class="panel">
-            <h3>資産スナップショット</h3>
-            <div class="kpi" id="asset-snapshot"></div>
-          </div>
-          <div class="panel">
-            <h3>アラート</h3>
-            <ul id="alerts" class="list"></ul>
-          </div>
-        </div>
-      </section>
+        <div class="dashboard-columns">
+          <div class="dashboard-column">
+            <div class="panel" id="summary-section">
+              <h3>月次集計テーブル</h3>
+              <div class="summary-kpi">
+                <h4>今月の収支</h4>
+                <div class="kpi" id="monthly-summary"></div>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>月</th>
+                      <th>収入</th>
+                      <th>支出</th>
+                      <th>収支</th>
+                      <th>振替</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthly-body"></tbody>
+                </table>
+              </div>
+              <div class="dashboard-alerts">
+                <h4>アラート</h4>
+                <ul id="alerts" class="list"></ul>
+              </div>
+            </div>
 
-      <section class="card" id="ledger-section">
-        <h2>3. 明細一覧</h2>
-        <div class="filters">
-          <label>期間(開始)
-            <input type="date" id="filter-start" />
-          </label>
-          <label>期間(終了)
-            <input type="date" id="filter-end" />
-          </label>
-          <label>検索
-            <input type="search" id="filter-search" placeholder="内容/メモ/カテゴリ" />
-          </label>
-          <label>
-            <input type="checkbox" id="filter-transfer" /> 振替も表示
-          </label>
-          <label>
-            <input type="checkbox" id="filter-excluded" /> 計算対象外も表示
-          </label>
-          <button id="refresh-ledger">再表示</button>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>内容</th>
-                <th>金額</th>
-                <th>金融機関</th>
-                <th>大項目</th>
-                <th>中項目</th>
-                <th>メモ</th>
-                <th>振替</th>
-                <th>計算対象</th>
-              </tr>
-            </thead>
-            <tbody id="ledger-body"></tbody>
-          </table>
-        </div>
-      </section>
+            <div class="panel" id="ledger-section">
+              <h3>明細一覧</h3>
+              <div class="filters">
+                <label>期間(開始)
+                  <input type="date" id="filter-start" />
+                </label>
+                <label>期間(終了)
+                  <input type="date" id="filter-end" />
+                </label>
+                <label>検索
+                  <input type="search" id="filter-search" placeholder="内容/メモ/カテゴリ" />
+                </label>
+                <label>
+                  <input type="checkbox" id="filter-transfer" /> 振替も表示
+                </label>
+                <label>
+                  <input type="checkbox" id="filter-excluded" /> 計算対象外も表示
+                </label>
+                <button id="refresh-ledger">再表示</button>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>日付</th>
+                      <th>内容</th>
+                      <th>金額</th>
+                      <th>金融機関</th>
+                      <th>大項目</th>
+                      <th>中項目</th>
+                      <th>メモ</th>
+                      <th>振替</th>
+                      <th>計算対象</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ledger-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-      <section class="card" id="summary-section">
-        <h2>4. 月次集計</h2>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>月</th>
-                <th>収入</th>
-                <th>支出</th>
-                <th>差分(支出)</th>
-                <th>収支</th>
-                <th>振替</th>
-              </tr>
-            </thead>
-            <tbody id="monthly-body"></tbody>
-          </table>
+          <div class="dashboard-column">
+            <div class="panel">
+              <h3>大項目別 乖離サマリ</h3>
+              <div id="category-gap-summary"></div>
+            </div>
+            <div class="panel">
+              <h3>主要カテゴリ上位</h3>
+              <ol id="top-categories" class="list"></ol>
+            </div>
+            <div class="panel">
+              <h3>資産スナップショット</h3>
+              <div class="kpi" id="asset-snapshot"></div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
