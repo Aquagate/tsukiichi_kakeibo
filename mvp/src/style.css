@@ -98,6 +98,18 @@ body {
   gap: 16px;
 }
 
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.content-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .panel {
   background: #f9fafb;
   border-radius: 12px;
@@ -168,4 +180,10 @@ button.secondary {
   text-align: center;
   color: #6b7280;
   font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 }

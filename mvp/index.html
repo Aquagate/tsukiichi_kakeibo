@@ -56,78 +56,89 @@
             <div class="kpi" id="monthly-summary"></div>
           </div>
           <div class="panel">
-            <h3>主要カテゴリ上位</h3>
-            <ol id="top-categories" class="list"></ol>
-            <div id="category-gap-summary"></div>
-          </div>
-          <div class="panel">
-            <h3>資産スナップショット</h3>
-            <div class="kpi" id="asset-snapshot"></div>
-          </div>
-          <div class="panel">
             <h3>アラート</h3>
             <ul id="alerts" class="list"></ul>
           </div>
         </div>
       </section>
 
-      <section class="card" id="summary-section">
-        <h2>3. 月次集計</h2>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>月</th>
-                <th>収入</th>
-                <th>支出</th>
-                <th>収支</th>
-                <th>振替</th>
-              </tr>
-            </thead>
-            <tbody id="monthly-body"></tbody>
-          </table>
-        </div>
-      </section>
+      <div class="content-grid">
+        <div class="content-column">
+          <section class="card" id="summary-section">
+            <h2>3. 月次集計</h2>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>月</th>
+                    <th>収入</th>
+                    <th>支出</th>
+                    <th>収支</th>
+                    <th>振替</th>
+                  </tr>
+                </thead>
+                <tbody id="monthly-body"></tbody>
+              </table>
+            </div>
+          </section>
 
-      <section class="card" id="ledger-section">
-        <h2>4. 明細一覧</h2>
-        <div class="filters">
-          <label>期間(開始)
-            <input type="date" id="filter-start" />
-          </label>
-          <label>期間(終了)
-            <input type="date" id="filter-end" />
-          </label>
-          <label>検索
-            <input type="search" id="filter-search" placeholder="内容/メモ/カテゴリ" />
-          </label>
-          <label>
-            <input type="checkbox" id="filter-transfer" /> 振替も表示
-          </label>
-          <label>
-            <input type="checkbox" id="filter-excluded" /> 計算対象外も表示
-          </label>
-          <button id="refresh-ledger">再表示</button>
+          <section class="card" id="ledger-section">
+            <h2>4. 明細一覧</h2>
+            <div class="filters">
+              <label>期間(開始)
+                <input type="date" id="filter-start" />
+              </label>
+              <label>期間(終了)
+                <input type="date" id="filter-end" />
+              </label>
+              <label>検索
+                <input type="search" id="filter-search" placeholder="内容/メモ/カテゴリ" />
+              </label>
+              <label>
+                <input type="checkbox" id="filter-transfer" /> 振替も表示
+              </label>
+              <label>
+                <input type="checkbox" id="filter-excluded" /> 計算対象外も表示
+              </label>
+              <button id="refresh-ledger">再表示</button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日付</th>
+                    <th>内容</th>
+                    <th>金額</th>
+                    <th>金融機関</th>
+                    <th>大項目</th>
+                    <th>中項目</th>
+                    <th>メモ</th>
+                    <th>振替</th>
+                    <th>計算対象</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-body"></tbody>
+              </table>
+            </div>
+          </section>
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>内容</th>
-                <th>金額</th>
-                <th>金融機関</th>
-                <th>大項目</th>
-                <th>中項目</th>
-                <th>メモ</th>
-                <th>振替</th>
-                <th>計算対象</th>
-              </tr>
-            </thead>
-            <tbody id="ledger-body"></tbody>
-          </table>
+
+        <div class="content-column">
+          <section class="card">
+            <h3>大項目別 乖離サマリ</h3>
+            <p class="hint" id="category-gap-summary">準備中</p>
+          </section>
+          <section class="card">
+            <h3>今月の主要カテゴリ上位</h3>
+            <ol id="top-categories" class="list"></ol>
+          </section>
+          <section class="card">
+            <h3>資産スナップショット</h3>
+            <div class="kpi" id="asset-snapshot"></div>
+          </section>
         </div>
-      </section>
+      </div>
+
     </main>
 
     <footer class="app-footer">
