@@ -10,6 +10,41 @@ import "./csv-utils.js";
   const topCategoriesEl = document.getElementById("top-categories");
   const assetSnapshotEl = document.getElementById("asset-snapshot");
   const alertsEl = document.getElementById("alerts");
+  const forecastSummaryEl = document.getElementById("forecast-summary");
+  const forecastYearlyBody = document.getElementById("forecast-yearly-body");
+  const pensionListEl = document.getElementById("pension-list");
+  const eventOnceListEl = document.getElementById("event-once-list");
+  const eventRecurringListEl = document.getElementById("event-recurring-list");
+
+  const forecastInputs = {
+    currentAge: document.getElementById("forecast-current-age"),
+    maxAge: document.getElementById("forecast-max-age"),
+    inflation: document.getElementById("forecast-inflation"),
+    baseIncome: document.getElementById("forecast-base-income"),
+    baseExpense: document.getElementById("forecast-base-expense"),
+    returnCash: document.getElementById("forecast-return-cash"),
+    returnStocks: document.getElementById("forecast-return-stocks"),
+    returnFunds: document.getElementById("forecast-return-funds"),
+  };
+
+  const pensionInputs = {
+    startAge: document.getElementById("pension-start-age"),
+    endAge: document.getElementById("pension-end-age"),
+    monthly: document.getElementById("pension-monthly"),
+  };
+
+  const onceEventInputs = {
+    month: document.getElementById("event-once-month"),
+    amount: document.getElementById("event-once-amount"),
+    label: document.getElementById("event-once-label"),
+  };
+
+  const recurringEventInputs = {
+    start: document.getElementById("event-recurring-start"),
+    end: document.getElementById("event-recurring-end"),
+    amount: document.getElementById("event-recurring-amount"),
+    label: document.getElementById("event-recurring-label"),
+  };
 
   const filters = {
     start: document.getElementById("filter-start"),
@@ -26,9 +61,13 @@ import "./csv-utils.js";
 
   const DB_NAME = "tsukiichi_kakeibo_mvp";
   const DB_VERSION = 1;
+  const FORECAST_STATE_KEY = "tsukiichi_kakeibo_forecast_m1";
   let db;
   let transactions = [];
   let assets = [];
+  let pensions = [];
+  let oneTimeEvents = [];
+  let recurringEvents = [];
 
   const requiredAssetColumns = ["date", "total"];
   const assetColumnLabels = {
@@ -283,6 +322,253 @@ import "./csv-utils.js";
     return `${year}-${month}`;
   }
 
+  function parseNumberInput(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function getMonthDate(monthValue) {
+    const [year, month] = String(monthValue || "").split("-").map((v) => Number(v));
+    if (!year || !month) return null;
+    return new Date(year, month - 1, 1);
+  }
+
+  function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function addMonths(date, offset) {
+    return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+  }
+
+  function monthlyAverageCashflow(items, lookbackMonths = 3) {
+    const monthly = summarizeMonthly(items.filter((tx) => !tx.isTransfer && tx.isIncluded));
+    const latest = monthly.slice(0, lookbackMonths);
+    if (!latest.length) return { income: 0, expense: 0 };
+    const totals = latest.reduce(
+      (acc, row) => {
+        acc.income += row.income;
+        acc.expense += row.expense;
+        return acc;
+      },
+      { income: 0, expense: 0 }
+    );
+    return {
+      income: Math.round(totals.income / latest.length),
+      expense: Math.round(totals.expense / latest.length),
+    };
+  }
+
+  function getStartingBuckets() {
+    const snapshot = latestAssetSnapshot(assets);
+    if (!snapshot) {
+      return { cash: 0, stocks: 0, funds: 0, points: 0 };
+    }
+    const total = toNumber(snapshot.total);
+    const cash = snapshot.cash === null ? 0 : toNumber(snapshot.cash);
+    const stocks = snapshot.stocks === null ? 0 : toNumber(snapshot.stocks);
+    const funds = snapshot.funds === null ? 0 : toNumber(snapshot.funds);
+    const points = snapshot.points === null ? 0 : toNumber(snapshot.points);
+    const known = cash + stocks + funds + points;
+    if (known === 0 && total > 0) {
+      return { cash: total, stocks: 0, funds: 0, points: 0 };
+    }
+    return { cash, stocks, funds, points };
+  }
+
+  function getForecastState() {
+    return {
+      inputs: {
+        currentAge: forecastInputs.currentAge.value,
+        maxAge: forecastInputs.maxAge.value,
+        inflation: forecastInputs.inflation.value,
+        baseIncome: forecastInputs.baseIncome.value,
+        baseExpense: forecastInputs.baseExpense.value,
+        returnCash: forecastInputs.returnCash.value,
+        returnStocks: forecastInputs.returnStocks.value,
+        returnFunds: forecastInputs.returnFunds.value,
+      },
+      pensions,
+      oneTimeEvents,
+      recurringEvents,
+    };
+  }
+
+  function saveForecastState() {
+    localStorage.setItem(FORECAST_STATE_KEY, JSON.stringify(getForecastState()));
+  }
+
+  function loadForecastState() {
+    const raw = localStorage.getItem(FORECAST_STATE_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      const inputs = parsed.inputs || {};
+      Object.keys(forecastInputs).forEach((key) => {
+        if (inputs[key] !== undefined && inputs[key] !== null) {
+          forecastInputs[key].value = inputs[key];
+        }
+      });
+      pensions = Array.isArray(parsed.pensions) ? parsed.pensions : [];
+      oneTimeEvents = Array.isArray(parsed.oneTimeEvents) ? parsed.oneTimeEvents : [];
+      recurringEvents = Array.isArray(parsed.recurringEvents) ? parsed.recurringEvents : [];
+    } catch (error) {
+      localStorage.removeItem(FORECAST_STATE_KEY);
+    }
+  }
+
+  function setForecastDefaultsFromData() {
+    const avg = monthlyAverageCashflow(transactions);
+    if (!parseNumberInput(forecastInputs.baseIncome.value, 0) && avg.income > 0) {
+      forecastInputs.baseIncome.value = String(avg.income);
+    }
+    if (!parseNumberInput(forecastInputs.baseExpense.value, 0) && avg.expense > 0) {
+      forecastInputs.baseExpense.value = String(avg.expense);
+    }
+  }
+
+  function renderPensionList() {
+    pensionListEl.innerHTML = pensions
+      .map(
+        (pension, index) =>
+          `<li>開始${pension.startAge}歳 / 月額${formatCurrency(pension.monthlyAmount)}${
+            pension.endAge ? ` / 終了${pension.endAge}歳` : ""
+          } <button type="button" data-delete-pension="${index}" class="secondary">削除</button></li>`
+      )
+      .join("");
+  }
+
+  function renderOneTimeEventList() {
+    eventOnceListEl.innerHTML = oneTimeEvents
+      .map(
+        (event, index) =>
+          `<li>${event.month} / ${event.label || "イベント"} / ${formatCurrency(
+            event.amount
+          )} <button type="button" data-delete-once="${index}" class="secondary">削除</button></li>`
+      )
+      .join("");
+  }
+
+  function renderRecurringEventList() {
+    eventRecurringListEl.innerHTML = recurringEvents
+      .map(
+        (event, index) =>
+          `<li>${event.startMonth}〜${event.endMonth} / ${event.label || "イベント"} / 月額${formatCurrency(
+            event.monthlyAmount
+          )} <button type="button" data-delete-recurring="${index}" class="secondary">削除</button></li>`
+      )
+      .join("");
+  }
+
+  function ageAtMonth(currentAge, startMonth, targetMonth) {
+    const diffMonths =
+      (targetMonth.getFullYear() - startMonth.getFullYear()) * 12 +
+      (targetMonth.getMonth() - startMonth.getMonth());
+    return currentAge + diffMonths / 12;
+  }
+
+  function simulateForecast() {
+    const currentAge = parseNumberInput(forecastInputs.currentAge.value, 35);
+    const maxAge = parseNumberInput(forecastInputs.maxAge.value, 100);
+    const inflationRate = parseNumberInput(forecastInputs.inflation.value, 0) / 100;
+    const baseIncome = parseNumberInput(forecastInputs.baseIncome.value, 0);
+    const baseExpense = parseNumberInput(forecastInputs.baseExpense.value, 0);
+    const returns = {
+      cash: parseNumberInput(forecastInputs.returnCash.value, 0) / 100,
+      stocks: parseNumberInput(forecastInputs.returnStocks.value, 0) / 100,
+      funds: parseNumberInput(forecastInputs.returnFunds.value, 0) / 100,
+    };
+
+    const spanYears = Math.max(0, maxAge - currentAge);
+    const months = Math.round(spanYears * 12);
+    const startMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const startBuckets = getStartingBuckets();
+    let cash = startBuckets.cash;
+    let stocks = startBuckets.stocks;
+    let funds = startBuckets.funds;
+    let points = startBuckets.points;
+
+    const pointsByMonth = [];
+    let shortageMonth = "";
+
+    for (let i = 0; i <= months; i += 1) {
+      const monthDate = addMonths(startMonth, i);
+      const monthKey = getMonthKey(monthDate);
+      const age = ageAtMonth(currentAge, startMonth, monthDate);
+      const yearsFromStart = i / 12;
+      const inflationFactor = Math.pow(1 + inflationRate, yearsFromStart);
+
+      const pensionMonthly = pensions.reduce((sum, pension) => {
+        const started = age >= pension.startAge;
+        const ended = pension.endAge ? age > pension.endAge : false;
+        return started && !ended ? sum + pension.monthlyAmount : sum;
+      }, 0);
+
+      const oneTimeMonthly = oneTimeEvents
+        .filter((event) => event.month === monthKey)
+        .reduce((sum, event) => sum + event.amount, 0);
+      const recurringMonthly = recurringEvents
+        .filter((event) => monthKey >= event.startMonth && monthKey <= event.endMonth)
+        .reduce((sum, event) => sum + event.monthlyAmount, 0);
+
+      const income = baseIncome * inflationFactor + pensionMonthly;
+      const expense = baseExpense * inflationFactor;
+      const cashflow = income - expense + oneTimeMonthly + recurringMonthly;
+
+      cash += cashflow;
+      cash *= 1 + returns.cash / 12;
+      stocks *= 1 + returns.stocks / 12;
+      funds *= 1 + returns.funds / 12;
+      const nominalAsset = cash + stocks + funds + points;
+      const realAsset = inflationFactor > 0 ? nominalAsset / inflationFactor : nominalAsset;
+
+      if (!shortageMonth && nominalAsset < 0) {
+        shortageMonth = monthKey;
+      }
+
+      pointsByMonth.push({
+        month: monthKey,
+        age: Number(age.toFixed(1)),
+        nominalAsset,
+        realAsset,
+        cashflow,
+      });
+    }
+
+    return { pointsByMonth, shortageMonth };
+  }
+
+  function renderForecast() {
+    const { pointsByMonth, shortageMonth } = simulateForecast();
+    const yearly = pointsByMonth.filter((_, index) => index === 0 || index % 12 === 0);
+    const latest = pointsByMonth[pointsByMonth.length - 1];
+    forecastSummaryEl.innerHTML = `
+      <div>開始時資産: ${formatCurrency(pointsByMonth[0]?.nominalAsset ?? 0)}</div>
+      <div>最終資産(名目): ${formatCurrency(latest?.nominalAsset ?? 0)}</div>
+      <div>最終資産(実質): ${formatCurrency(latest?.realAsset ?? 0)}</div>
+      <div>資金ショート予測: ${shortageMonth || "なし"}</div>
+    `;
+
+    forecastYearlyBody.innerHTML = yearly
+      .map(
+        (point) => `
+        <tr>
+          <td>${point.month}</td>
+          <td>${point.age.toFixed(1)}</td>
+          <td>${formatCurrency(point.nominalAsset)}</td>
+          <td>${formatCurrency(point.realAsset)}</td>
+          <td>${formatCurrency(point.cashflow * 12)}</td>
+        </tr>
+      `
+      )
+      .join("");
+
+    renderPensionList();
+    renderOneTimeEventList();
+    renderRecurringEventList();
+    saveForecastState();
+  }
+
   function summarizeMonthly(items) {
     const map = new Map();
     for (const tx of items) {
@@ -462,9 +748,11 @@ import "./csv-utils.js";
   async function loadData() {
     transactions = await readAll("transactions");
     assets = await readAll("assets");
+    setForecastDefaultsFromData();
     renderDashboard();
     renderLedger();
     renderMonthlySummary();
+    renderForecast();
   }
 
   function showEnvironmentNotice() {
@@ -552,6 +840,16 @@ import "./csv-utils.js";
     }
     db = await openDb();
     dbStatus.textContent = "DB: 初期化済み";
+    loadForecastState();
+    if (!onceEventInputs.month.value) {
+      onceEventInputs.month.value = getMonthKey(new Date());
+    }
+    if (!recurringEventInputs.start.value) {
+      recurringEventInputs.start.value = getMonthKey(new Date());
+    }
+    if (!recurringEventInputs.end.value) {
+      recurringEventInputs.end.value = getMonthKey(addMonths(new Date(), 11));
+    }
     showEnvironmentNotice();
     await loadData();
 
@@ -591,6 +889,83 @@ import "./csv-utils.js";
 
     document.getElementById("refresh-ledger").addEventListener("click", () => {
       renderLedger();
+    });
+
+    document.getElementById("run-forecast").addEventListener("click", () => {
+      renderForecast();
+    });
+
+    Object.values(forecastInputs).forEach((input) => {
+      input.addEventListener("change", renderForecast);
+    });
+
+    document.getElementById("add-pension").addEventListener("click", () => {
+      const startAge = parseNumberInput(pensionInputs.startAge.value, 65);
+      const endAgeRaw = parseNumberInput(pensionInputs.endAge.value, 0);
+      const monthlyAmount = parseNumberInput(pensionInputs.monthly.value, 0);
+      if (monthlyAmount === 0) return;
+      const endAge = endAgeRaw > 0 ? endAgeRaw : null;
+      if (endAge && endAge < startAge) {
+        importResult.textContent = "年金終了年齢は開始年齢以上にしてください。";
+        return;
+      }
+      pensions.push({ startAge, endAge, monthlyAmount });
+      importResult.textContent = "";
+      renderForecast();
+    });
+
+    pensionListEl.addEventListener("click", (event) => {
+      const index = event.target.dataset.deletePension;
+      if (index === undefined) return;
+      pensions = pensions.filter((_, itemIndex) => itemIndex !== Number(index));
+      renderForecast();
+    });
+
+    document.getElementById("add-event-once").addEventListener("click", () => {
+      const month = onceEventInputs.month.value;
+      const amount = parseNumberInput(onceEventInputs.amount.value, 0);
+      if (!month || amount === 0) return;
+      oneTimeEvents.push({
+        month,
+        amount,
+        label: onceEventInputs.label.value.trim(),
+      });
+      onceEventInputs.label.value = "";
+      renderForecast();
+    });
+
+    eventOnceListEl.addEventListener("click", (event) => {
+      const index = event.target.dataset.deleteOnce;
+      if (index === undefined) return;
+      oneTimeEvents = oneTimeEvents.filter((_, itemIndex) => itemIndex !== Number(index));
+      renderForecast();
+    });
+
+    document.getElementById("add-event-recurring").addEventListener("click", () => {
+      const startMonth = recurringEventInputs.start.value;
+      const endMonth = recurringEventInputs.end.value;
+      const monthlyAmount = parseNumberInput(recurringEventInputs.amount.value, 0);
+      if (!startMonth || !endMonth || monthlyAmount === 0) return;
+      if (endMonth < startMonth) {
+        importResult.textContent = "期間イベントの終了年月は開始年月以降にしてください。";
+        return;
+      }
+      recurringEvents.push({
+        startMonth,
+        endMonth,
+        monthlyAmount,
+        label: recurringEventInputs.label.value.trim(),
+      });
+      recurringEventInputs.label.value = "";
+      importResult.textContent = "";
+      renderForecast();
+    });
+
+    eventRecurringListEl.addEventListener("click", (event) => {
+      const index = event.target.dataset.deleteRecurring;
+      if (index === undefined) return;
+      recurringEvents = recurringEvents.filter((_, itemIndex) => itemIndex !== Number(index));
+      renderForecast();
     });
   }
 

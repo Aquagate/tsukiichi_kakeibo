@@ -63,6 +63,107 @@
         </div>
       </section>
 
+      <section class="card" id="forecast-section">
+        <h2>5. 将来シミュレーション (M1)</h2>
+        <div class="forecast-grid">
+          <label>現在年齢
+            <input type="number" id="forecast-current-age" min="18" max="100" value="35" />
+          </label>
+          <label>予測上限年齢
+            <input type="number" id="forecast-max-age" min="20" max="110" value="100" />
+          </label>
+          <label>年間インフレ率 (%)
+            <input type="number" id="forecast-inflation" step="0.1" value="2" />
+          </label>
+          <label>毎月の収入 (円)
+            <input type="number" id="forecast-base-income" step="1000" value="0" />
+          </label>
+          <label>毎月の支出 (円)
+            <input type="number" id="forecast-base-expense" step="1000" value="0" />
+          </label>
+          <label>現金 年率 (%)
+            <input type="number" id="forecast-return-cash" step="0.1" value="0.1" />
+          </label>
+          <label>株式 年率 (%)
+            <input type="number" id="forecast-return-stocks" step="0.1" value="5" />
+          </label>
+          <label>投信 年率 (%)
+            <input type="number" id="forecast-return-funds" step="0.1" value="4" />
+          </label>
+        </div>
+
+        <div class="forecast-block">
+          <h3>年金 (手入力)</h3>
+          <div class="forecast-grid">
+            <label>開始年齢
+              <input type="number" id="pension-start-age" min="50" max="100" value="65" />
+            </label>
+            <label>終了年齢 (任意)
+              <input type="number" id="pension-end-age" min="50" max="110" />
+            </label>
+            <label>月額 (円)
+              <input type="number" id="pension-monthly" step="1000" value="150000" />
+            </label>
+            <button id="add-pension" type="button">年金を追加</button>
+          </div>
+          <ul id="pension-list" class="list"></ul>
+        </div>
+
+        <div class="forecast-block">
+          <h3>ライフイベント: 一時支出/収入</h3>
+          <div class="forecast-grid">
+            <label>年月
+              <input type="month" id="event-once-month" />
+            </label>
+            <label>金額 (円)
+              <input type="number" id="event-once-amount" step="1000" value="-300000" />
+            </label>
+            <label>ラベル
+              <input type="text" id="event-once-label" placeholder="例: 家電買替" />
+            </label>
+            <button id="add-event-once" type="button">一時イベント追加</button>
+          </div>
+          <ul id="event-once-list" class="list"></ul>
+        </div>
+
+        <div class="forecast-block">
+          <h3>ライフイベント: 期間支出/収入</h3>
+          <div class="forecast-grid">
+            <label>開始年月
+              <input type="month" id="event-recurring-start" />
+            </label>
+            <label>終了年月
+              <input type="month" id="event-recurring-end" />
+            </label>
+            <label>月額 (円)
+              <input type="number" id="event-recurring-amount" step="1000" value="-50000" />
+            </label>
+            <label>ラベル
+              <input type="text" id="event-recurring-label" placeholder="例: 教育費" />
+            </label>
+            <button id="add-event-recurring" type="button">期間イベント追加</button>
+          </div>
+          <ul id="event-recurring-list" class="list"></ul>
+        </div>
+
+        <button id="run-forecast" type="button">予測を再計算</button>
+        <div id="forecast-summary" class="forecast-summary"></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>年</th>
+                <th>年齢</th>
+                <th>名目資産</th>
+                <th>実質資産</th>
+                <th>年間収支</th>
+              </tr>
+            </thead>
+            <tbody id="forecast-yearly-body"></tbody>
+          </table>
+        </div>
+      </section>
+
       <div class="content-grid">
         <div class="content-column">
           <section class="card" id="summary-section">

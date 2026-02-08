@@ -98,6 +98,39 @@ body {
   gap: 16px;
 }
 
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 14px;
+  align-items: end;
+}
+
+.forecast-grid label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.forecast-block {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.forecast-summary {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+input,
+select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
