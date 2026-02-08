@@ -1,3 +1,6 @@
+import * as XLSX from "xlsx";
+import "./csv-utils.js";
+
 (() => {
   const dbStatus = document.getElementById("db-status");
   const importResult = document.getElementById("import-result");
@@ -168,8 +171,8 @@
     if (value instanceof Date) {
       return value.toISOString().slice(0, 10);
     }
-    if (typeof value === "number" && window.XLSX?.SSF?.parse_date_code) {
-      const date = window.XLSX.SSF.parse_date_code(value);
+    if (typeof value === "number" && XLSX.SSF?.parse_date_code) {
+      const date = XLSX.SSF.parse_date_code(value);
       if (!date) return "";
       return new Date(date.y, date.m - 1, date.d).toISOString().slice(0, 10);
     }
@@ -215,7 +218,7 @@
           sourceFile: row.sourceFile ? String(row.sourceFile) : sourceFileName,
         };
       })
-      .filter((row) => row.date && row.description);
+      .filter((row) => row.date && row.description && row.isIncluded);
   }
 
   function parseAssets(rows, overrides = {}) {
@@ -256,11 +259,8 @@
   }
 
   async function readWorkbook(file) {
-    if (!window.XLSX) {
-      throw new Error("XLSX ライブラリが読み込めませんでした。");
-    }
     const arrayBuffer = await file.arrayBuffer();
-    return window.XLSX.read(arrayBuffer, { type: "array" });
+    return XLSX.read(arrayBuffer, { type: "array" });
   }
 
   function sheetToJson(workbook, preferredSheet) {
@@ -268,7 +268,7 @@
       ? preferredSheet
       : workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    return window.XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    return XLSX.utils.sheet_to_json(sheet, { defval: "" });
   }
 
   function formatCurrency(value) {
@@ -468,11 +468,7 @@
   }
 
   function showEnvironmentNotice() {
-    const isFile = window.location.protocol === "file:";
-    if (isFile && !window.XLSX) {
-      importResult.textContent =
-        "注意: file:// で開いているため XLSX が読み込めません。CSVのみ取り込み可能です。";
-    }
+    importResult.textContent = "";
   }
 
   function getAssetDupStrategy() {
