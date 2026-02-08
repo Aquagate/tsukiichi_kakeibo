@@ -1,7 +1,5 @@
-import * as XLSX from "xlsx";
-import "./csv-utils.js";
-
 (() => {
+  const XLSX = window.XLSX;
   const dbStatus = document.getElementById("db-status");
   const importResult = document.getElementById("import-result");
   const ledgerBody = document.getElementById("ledger-body");
@@ -298,6 +296,9 @@ import "./csv-utils.js";
   }
 
   async function readWorkbook(file) {
+    if (!XLSX) {
+      throw new Error("XLSX ライブラリが読み込めませんでした。");
+    }
     const arrayBuffer = await file.arrayBuffer();
     return XLSX.read(arrayBuffer, { type: "array" });
   }
